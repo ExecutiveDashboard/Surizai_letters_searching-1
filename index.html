@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Letter Search</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>window.pdfjsLib = window['pdfjs-dist/build/pdf'];</script>
+  <!-- jsPDF Library for PDF generation from DOCX letter content -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- docx library for DOCX file generation -->
+  <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+      /* text-decoration: underline; */
+      text-transform: uppercase;
+    }
+
+    .search-box {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    input[type="text"] {
+      padding: 12px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .download-btn {
+      background-color: #2196F3;
+      padding: 8px 16px;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .download-btn:hover {
+      background-color: #0b7dda;
+    }
+
+    .result-info {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: bold;
+      position: sticky;
+      top: 0;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      vertical-align: top;
+    }
+
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    .letter-content {
+      max-width: 400px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .no-result {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+      font-size: 16px;
+    }
+
+    .member-name {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .member-cnic {
+      color: #666;
+      font-family: monospace;
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin-bottom: 15px;
+      }
+
+      input[type="text"] {
+        padding: 10px;
+        font-size: 14px;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .download-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      table {
+        font-size: 12px;
+        min-width: 500px;
+      }
+
+      th,
+      td {
+        padding: 8px;
+      }
+
+      .letter-content {
+        max-width: 250px;
+        max-height: 120px;
+        font-size: 12px;
+      }
+
+      .result-info {
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 18px;
+      }
+
+      input[type="text"] {
+        font-size: 13px;
+        padding: 8px;
+      }
+
+      button {
+        font-size: 13px;
+        padding: 8px 16px;
+      }
+
+      table {
+        font-size: 11px;
+      }
+
+      th,
+      td {
+        padding: 6px;
+      }
+
+      .letter-content {
+        max-width: 180px;
+        max-height: 100px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>PHA RESIDENCIA PESHAWAR<br>Allottees Payment Schedule</h1>
+
+  <div class="search-box">
+    <div
+      style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
+      <label for="cnicInput" style="font-weight: bold;">CNIC:</label>
+      <input type="text" id="cnicInput" placeholder="Enter CNIC" style="max-width: 200px;"
+        onkeypress="if(event.key==='Enter') searchLetter()">
+
+      <label for="nameInput" style="font-weight: bold;">Name:</label>
+      <input type="text" id="nameInput" placeholder="Enter Name" style="max-width: 200px;"
+        onkeypress="if(event.key==='Enter') searchLetter()">
+    </div>
+    <button onclick="searchLetter()">DOWNLOAD PDF</button>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    let lettersData = [];
+    let masterPdfBytes = null;
+
+    // Fetch JSON Data
+    fetch('letters_from_docx.json')
+      .then(response => response.json())
+      .then(data => {
+        lettersData = data.letters;
+      })
+      .catch(error => {
+        document.getElementById('result').innerHTML = `<p class="no-result">Error loading data. Please check if the JSON file exists.</p>`;
+      });
+
+    // Fetch Master PDF
+    fetch('No.pdf')
+      .then(response => {
+        if (!response.ok) throw new Error("No.pdf not found");
+        return response.arrayBuffer();
+      })
+      .then(buffer => {
+        masterPdfBytes = buffer;
+        console.log("Master PDF loaded successfully");
+      })
+      .catch(error => {
+        console.warn("Could not load No.pdf. PDF extraction might fail.", error);
+      });
+
+    function searchLetter() {
+      const cnicQuery = document.getElementById('cnicInput').value.trim().toLowerCase();
+      const nameQuery = document.getElementById('nameInput').value.trim().toLowerCase();
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';
+
+      if (!cnicQuery && !nameQuery) {
+        resultDiv.innerHTML = '<p class="no-result">Please enter a Name or CNIC to search</p>';
+        return;
+      }
+
+      const matched = lettersData.filter(letter => {
+        const matchesCnic = cnicQuery ? (letter.cnic && letter.cnic.toLowerCase().includes(cnicQuery)) : true;
+        const matchesName = nameQuery ? (letter.name && letter.name.toLowerCase().includes(nameQuery)) : true;
+        return matchesCnic && matchesName;
+      });
+
+      if (matched.length === 0) {
+        resultDiv.innerHTML = `<p class="no-result">No results found for "${cnicQuery} ${nameQuery}"</p>`;
+        return;
+      }
+
+      let tableHTML = `
+        <p class="result-info">Found ${matched.length} result(s)</p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>CNIC</th>
+                <th>Letter Content</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      matched.forEach((letter, index) => {
+        // Pass letter.id to PDF download function
+        tableHTML += `
+          <tr>
+            <td>${letter.id}</td>
+            <td class="member-name">${letter.name}</td>
+            <td class="member-cnic">${letter.cnic}</td>
+            <td>
+              <div class="letter-content">${letter.text ? letter.text.substring(0, 100) : ''}...</div>
+            </td>
+            <td>
+
+              <button class="download-btn" onclick="downloadLetterAsPDF(${letter.id}, '${letter.name.replace(/'/g, "\\'")}')">PDF</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tableHTML += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      resultDiv.innerHTML = tableHTML;
+      window.currentMatches = matched;
+    }
+
+    async function downloadLetterAsPDF(letterId, memberName) {
+      if (!masterPdfBytes) {
+        alert("Master PDF (No.pdf) is not loaded yet or missing. Cannot extract PDF.");
+        return;
+      }
+
+      const statusDiv = document.createElement('div');
+      statusDiv.style.position = 'fixed';
+      statusDiv.style.top = '50%';
+      statusDiv.style.left = '50%';
+      statusDiv.style.transform = 'translate(-50%, -50%)';
+      statusDiv.style.padding = '20px';
+      statusDiv.style.background = 'rgba(0,0,0,0.8)';
+      statusDiv.style.color = 'white';
+      statusDiv.style.borderRadius = '5px';
+      statusDiv.style.zIndex = '9999';
+      statusDiv.innerText = `Searching for "${memberName}" in PDF...`;
+      document.body.appendChild(statusDiv);
+
+      try {
+        // Initialize PDF.js
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Load document proxy for searching
+        const loadingTask = pdfjsLib.getDocument({ data: masterPdfBytes.slice(0) }); // Slice to clone buffer if needed
+        const pdf = await loadingTask.promise;
+
+        let foundPageIndex = -1;
+        const totalPages = pdf.numPages;
+
+        // Sanitize name for search (remove extra spaces)
+        // We will simple-search: check if page text contains the name
+        const searchName = memberName.trim().toLowerCase();
+
+        // Limit search to reasonable range or all? Searching all might be slow if large.
+        // But for exact match we need to search.
+        // Optimization: Start searching from letterId - 1 (approximate location)? 
+        // No, user said order is wrong. We must search all.
+
+        for (let i = 1; i <= totalPages; i++) {
+          // Update status every 10 pages or so to show progress
+          if (i % 10 === 0) statusDiv.innerText = `Searching page ${i} of ${totalPages}...`;
+
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(' ').toLowerCase();
+
+          if (pageText.includes(searchName)) {
+            foundPageIndex = i - 1; // 0-based index
+            console.log(`Found "${memberName}" on page ${i}`);
+            break;
+          }
+        }
+
+        if (foundPageIndex === -1) {
+          // Fallback: Use the ID as the page number (legacy behavior) but warn
+          // Note: letterId is 1-based, PDF-lib uses 0-based
+          const fallbackIndex = letterId - 1;
+          console.warn(`Name "${memberName}" not found in text. Using ID-based index: ${letterId}`);
+          if (confirm(`Could not find name "${memberName}" in the PDF text.\n\nDo you want to try downloading Page ${letterId} (based on ID) instead?`)) {
+            foundPageIndex = fallbackIndex;
+          } else {
+            document.body.removeChild(statusDiv);
+            return;
+          }
+        }
+
+        // --- PDF Generation (using PDF-Lib) ---
+        statusDiv.innerText = "Extracting page...";
+        const { PDFDocument } = PDFLib;
+        const pdfDoc = await PDFDocument.load(masterPdfBytes);
+        const newPdf = await PDFDocument.create();
+
+        if (foundPageIndex < 0 || foundPageIndex >= pdfDoc.getPageCount()) {
+          throw new Error(`Invalid page index: ${foundPageIndex}`);
+        }
+
+        const [copiedPage] = await newPdf.copyPages(pdfDoc, [foundPageIndex]);
+        newPdf.addPage(copiedPage);
+
+        const pdfBytes = await newPdf.save();
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const fileName = `${memberName.replace(/\s+/g, '_')}.pdf`;
+        saveAs(blob, fileName);
+
+        console.log('PDF Downloaded');
+
+      } catch (err) {
+        console.error("Error generating PDF:", err);
+        alert("Error generating PDF: " + err.message);
+      } finally {
+        if (document.body.contains(statusDiv)) {
+          document.body.removeChild(statusDiv);
+        }
+      }
+    }
+
+    async function downloadLetterAsDOCX(index) {
+      const letter = window.currentMatches[index];
+
+      if (!letter || !letter.text || !letter.name) {
+        alert('Letter data is incomplete. Cannot generate DOCX.');
+        return;
+      }
+
+      console.log('Downloading DOCX letter for:', letter.name);
+
+      try {
+        const { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer } = docx;
+
+        // Create document sections
+        const children = [];
+
+        // Header
+        children.push(
+          new Paragraph({
+            text: "PHA FOUNDATION",
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 100 }
+          }),
+          new Paragraph({
+            text: "MINISTRY OF HOUSING & WORKS",
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 50 }
+          }),
+          new Paragraph({
+            text: "GROUND FLOOR SHAGEED E MILLAT",
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 50 }
+          }),
+          new Paragraph({
+            text: "SECRETARIAT BLUE AREA, ISLAMABAD",
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          })
+        );
+
+        // Letter content - split by newlines and create paragraphs
+        const lines = letter.text.split('\n');
+        lines.forEach(line => {
+          if (line.trim()) {
+            children.push(
+              new Paragraph({
+                text: line,
+                spacing: { after: 100 }
+              })
+            );
+          }
+        });
+
+        // Create document
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: children
+          }]
+        });
+
+        // Generate and save
+        const blob = await Packer.toBlob(doc);
+        const fileName = `${letter.name.replace(/\s+/g, '_')}.docx`;
+        saveAs(blob, fileName);
+
+        console.log('DOCX downloaded successfully:', fileName);
+      } catch (error) {
+        console.error('Error generating DOCX:', error);
+        alert('Error generating DOCX file. Please try PDF instead.');
+      }
+    }
+  </script>
+</body>
+
+</html>
