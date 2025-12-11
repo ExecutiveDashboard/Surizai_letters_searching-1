@@ -239,7 +239,7 @@
       <input type="text" id="nameInput" placeholder="Enter Name" style="max-width: 200px;"
         onkeypress="if(event.key==='Enter') searchLetter()">
     </div>
-    <button onclick="searchLetter()">DOWNLOAD PDF</button>
+    <button onclick="searchLetter()">Search</button>
   </div>
 
   <div id="result"></div>
@@ -247,6 +247,7 @@
   <script>
     let lettersData = [];
     let masterPdfBytes = null;
+    let backPagePdfBytes = null;
 
     // Fetch JSON Data
     fetch('letters_from_docx.json')
@@ -270,6 +271,20 @@
       })
       .catch(error => {
         console.warn("Could not load No.pdf. PDF extraction might fail.", error);
+      });
+
+    // Fetch Back Page PDF
+    fetch('Back PAge.pdf')
+      .then(response => {
+        if (!response.ok) throw new Error("Back PAge.pdf not found");
+        return response.arrayBuffer();
+      })
+      .then(buffer => {
+        backPagePdfBytes = buffer;
+        console.log("Back Page PDF loaded successfully");
+      })
+      .catch(error => {
+        console.warn("Could not load Back PAge.pdf.", error);
       });
 
     function searchLetter() {
@@ -321,7 +336,6 @@
               <div class="letter-content">${letter.text ? letter.text.substring(0, 100) : ''}...</div>
             </td>
             <td>
-
               <button class="download-btn" onclick="downloadLetterAsPDF(${letter.id}, '${letter.name.replace(/'/g, "\\'")}')">PDF</button>
             </td>
           </tr>
@@ -407,7 +421,7 @@
         }
 
         // --- PDF Generation (using PDF-Lib) ---
-        statusDiv.innerText = "Extracting page...";
+        statusDiv.innerText = "Extracting and merging pages...";
         const { PDFDocument } = PDFLib;
         const pdfDoc = await PDFDocument.load(masterPdfBytes);
         const newPdf = await PDFDocument.create();
@@ -416,8 +430,25 @@
           throw new Error(`Invalid page index: ${foundPageIndex}`);
         }
 
+        // Copy the letter page
         const [copiedPage] = await newPdf.copyPages(pdfDoc, [foundPageIndex]);
         newPdf.addPage(copiedPage);
+
+        // Copy Back Page(s) if available
+        if (backPagePdfBytes) {
+          try {
+            const backPdfDoc = await PDFDocument.load(backPagePdfBytes);
+            const backPdfPages = backPdfDoc.getPageIndices();
+            const copiedBackPages = await newPdf.copyPages(backPdfDoc, backPdfPages);
+            copiedBackPages.forEach(page => newPdf.addPage(page));
+            console.log(`Added ${copiedBackPages.length} pages from Back PAge.pdf`);
+          } catch (e) {
+            console.error("Error merging Back PAge.pdf:", e);
+            alert("Letter extracted, but failed to merge 'Back PAge.pdf'. " + e.message);
+          }
+        } else {
+          console.warn("Back PAge.pdf not loaded, skipping merge.");
+        }
 
         const pdfBytes = await newPdf.save();
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
